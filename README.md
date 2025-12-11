@@ -1,3 +1,5 @@
+### Flamethrower rehabilitation
+
 This plugin addressess issues with flamethrower that were pointed out in this video: https://www.youtube.com/watch?v=JqaI5LhNalk
 
 1. Disables Blue Moon rampup mechanics.
