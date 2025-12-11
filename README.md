@@ -29,7 +29,7 @@ This plugin addresses the issues that were pointed out in the video.
 2. The so-called Blue Moon rampup is disabled.
 3. A new heuristics for detecting low-density flames (that was the goal of that Blue Moon rampup) is introduced. It is based on angular speed estimation of the flamethrower user.
 
-How heuristics works: whenever a flame is picked for damage, the game looks back into history and estimates angular speed of the player at the time when the flame was spawned.
+How heuristics works: whenever a flame is picked for damage, the game looks back into history and estimates angular speed of the player at the time when the flame was spawned. If angular speed is estimated to be greater than certain threshold, then the flame is considered to represent sparse state of fire thus it is penalized with damage reduction proportional to the amount of angular speed (up until second threshold value where the damage reduction ends and is capped at -50%).
 
 The default numbers were tuned such that it is expected that almost 100% of the time there is no damage penalty whatsoever so long the player doesn't try to cover a large volume with fire intentionally (which is precisely the tactics that Valve TRIED to address with the Blue Moon mechanics). In other words, spin around like crazy, and the maximum penalty is applied by guarantee; focus static target and expect no penalty by guarantee; play like normal and almost never face the penalty except, maybe, for occasional tiny fractions of a second when you change your view direction to switch targets and unintentionally get a trade-off of having a larger volume covered with sparser, less-damaging, flames.
 
