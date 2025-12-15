@@ -55,3 +55,7 @@ Tested on Windows.
 "sm_ftrehab_display_angular_speed_multiplier" = "0" min. 0.000000 max. 1.000000
  - (For development) If enabled, damage multiplier that is based on angular speed will be displayed to the player
 ```
+
+### Demonstration
+
+https://www.youtube.com/watch?v=xsNfgdueT9U
