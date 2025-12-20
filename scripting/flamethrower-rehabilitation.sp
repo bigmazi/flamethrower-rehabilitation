@@ -7,7 +7,7 @@ public Plugin myinfo = {
 	name = "Flamethrower Rehabilitation",
 	author = "bigmazi",
 	description = "Overhauls flamethrower mechanics",
-	version = "1.0.0.0",
+	version = "1.0.0.1",
 	url = "https://steamcommunity.com/id/bmazi"
 };
 
@@ -325,7 +325,7 @@ MRESReturn CTFFlameManager_GetFlameDamageScale_Pre(
 	}
 	else
 	{
-		DHookSetParam(params, 2, INVALID_ENT_REFERENCE);
+		DHookSetParam(params, 2, 0);
 		return MRES_ChangedHandled;
 	}
 	
