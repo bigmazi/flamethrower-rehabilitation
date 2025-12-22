@@ -4,10 +4,10 @@
 #include <dhooks>
 
 public Plugin myinfo = {
-	name = "Flamethrower Rehabilitation",
+	name = "[TF2] Flamethrower Rehabilitation",
 	author = "bigmazi",
 	description = "Overhauls flamethrower mechanics",
-	version = "1.0.0.1",
+	version = "1.1.0.0",
 	url = "https://steamcommunity.com/id/bmazi"
 };
 
@@ -21,7 +21,23 @@ public Plugin myinfo = {
 #define HISTORY_RING_SIZE 512
 #define HISTORY_RING_MASK (HISTORY_RING_SIZE - 1)
 
+#define RAMPUP_RING_SIZE 512
+#define RAMPUP_RING_MASK (RAMPUP_RING_SIZE - 1)
+
 #define tf_point_t__m_flSpawnTime 28
+
+
+
+// Types
+// ----------------------------------------------------------------------------
+
+enum struct Rampup
+{
+	int attackerRef;
+	int victimRef;
+	float amount;
+	float lastIncrementTime;
+}
 
 
 
@@ -30,14 +46,18 @@ public Plugin myinfo = {
 
 int g_offset__m_vecPoints;
 int g_offset__m_vecPoints__m_Size; // Windows: 0x4A8, Linux: 0x4C0
+int g_offset__m_RefEHandle; // 848
 
 float g_timestampsHistory[PLAYERS_ARRAY_SIZE][HISTORY_RING_SIZE];
 float g_directionsHistory[PLAYERS_ARRAY_SIZE][HISTORY_RING_SIZE][3];
-
 int g_historyCursors[PLAYERS_ARRAY_SIZE];
 
-float g_densityFactor;
+Rampup g_rampup[RAMPUP_RING_SIZE];
+int g_rampupCursor;
 
+float g_customDamageFactor;
+
+ConVar sm_ftrehab_plugin_enabled;
 ConVar sm_ftrehab_reverse_flames_priority;
 ConVar sm_ftrehab_bluemoon_rampup;
 ConVar sm_ftrehab_angular_speed_affects_damage;
@@ -46,6 +66,14 @@ ConVar sm_ftrehab_angular_speed_estimation_time_window;
 ConVar sm_ftrehab_angular_speed_start_penalty;
 ConVar sm_ftrehab_angular_speed_end_penalty;
 ConVar sm_ftrehab_display_angular_speed_multiplier;
+ConVar sm_ftrehab_refill_dummy_bots;
+ConVar sm_ftrehab_custom_rampup_enabled;
+ConVar sm_ftrehab_custom_rampup_increment_per_hit;
+ConVar sm_ftrehab_custom_rampup_linger_time;
+ConVar sm_ftrehab_custom_rampup_drain_time;
+ConVar sm_ftrehab_custom_rampup_first_tick_deals_max_damage;
+ConVar sm_ftrehab_custom_rampup_increment_is_affected_by_angular_speed;
+ConVar sm_ftrehab_display_custom_rampup;
 
 
 
@@ -66,8 +94,8 @@ stock float Clamp(float x, float a, float b)
 
 stock float ClampRemap(float x, float a, float b, float A, float B)
 {
-	x = Clamp(x, a, b);
 	float amount = (x - a) / (b - a);
+	amount = Clamp(amount, 0.0, 1.0);
 	return Lerp(A, B, amount);
 }
 
@@ -134,6 +162,9 @@ void CacheOffsets()
 	int m_unNextPointIndex = FindSendPropInfo("CTFFlameManager", "m_unNextPointIndex");	
 	g_offset__m_vecPoints = m_unNextPointIndex + 8;
 	g_offset__m_vecPoints__m_Size = g_offset__m_vecPoints + 12;
+	
+	int m_angRotation = FindSendPropInfo("CBaseEntity", "m_angRotation");
+	g_offset__m_RefEHandle = m_angRotation + 12;
 }
 
 void ApplySdkHooks(int manager)
@@ -257,6 +288,79 @@ int MatchWithHistoryFrame(int player, float targetTime)
 	return -1;
 }
 
+float ApplyCustomRampup(int attacker, int victimRef, float angularSpeedDamageFactor)
+{
+	int attackerRef = EntIndexToEntRef(attacker);
+	
+	int ringIdx = -1;
+	
+	for (int offset = 0; offset < RAMPUP_RING_SIZE; offset++)
+	{
+		int cursor = (g_rampupCursor + RAMPUP_RING_SIZE - offset) & RAMPUP_RING_MASK;
+		
+		bool foundExisting =
+			g_rampup[cursor].attackerRef == attackerRef &&
+			g_rampup[cursor].victimRef == victimRef;
+		
+		if (foundExisting)
+		{
+			ringIdx = cursor;
+			break;
+		}
+	}
+	
+	if (ringIdx == -1)
+	{
+		g_rampupCursor += 1;
+		ringIdx = g_rampupCursor;
+		
+		g_rampup[ringIdx].attackerRef = attackerRef;
+		g_rampup[ringIdx].victimRef = victimRef;		
+		g_rampup[ringIdx].amount = 0.0;		
+		g_rampup[ringIdx].lastIncrementTime = -1000.0;		
+	}
+	
+	float now = GetGameTime();
+	float timeSinceLastIncrement = now - g_rampup[ringIdx].lastIncrementTime;
+	
+	float drainedAmount = ClampRemap(
+		timeSinceLastIncrement - sm_ftrehab_custom_rampup_linger_time.FloatValue,
+		0.0, sm_ftrehab_custom_rampup_drain_time.FloatValue,
+		0.0, 1.0
+	);
+	
+	float amountAfterDrain = Clamp(
+		g_rampup[ringIdx].amount - drainedAmount,
+		0.0, 1.0
+	);
+	
+	float damageFactor = Lerp(0.5, 1.0, amountAfterDrain);
+	
+	if (damageFactor == 0.5)
+	{
+		if (sm_ftrehab_custom_rampup_first_tick_deals_max_damage.BoolValue)
+		{
+			damageFactor = 1.0;
+		}
+	}
+	
+	float increment = sm_ftrehab_custom_rampup_increment_per_hit.FloatValue
+	
+	if (sm_ftrehab_custom_rampup_increment_is_affected_by_angular_speed.BoolValue)
+	{
+		increment *= angularSpeedDamageFactor;
+	}
+	
+	g_rampup[ringIdx].amount = Clamp(
+		amountAfterDrain + increment,
+		0.0, 1.0
+	);
+	
+	g_rampup[ringIdx].lastIncrementTime = now;
+	
+	return damageFactor;
+}
+
 
 
 // Hooks
@@ -273,7 +377,7 @@ void tf_flame_manager_Touch_Post(int manager, int other)
 }
 
 void tf_flame_manager_Think_Pre(int manager)
-{
+{	
 	bool isFiring = !!GetEntProp(manager, Prop_Send, "m_bIsFiring");
 	
 	if (!isFiring)
@@ -302,21 +406,55 @@ void tf_flame_manager_Think_Pre(int manager)
 
 MRESReturn CTFFlameManager_GetFlameDamageScale_Pre(
 	int manager, DHookReturn result, DHookParam params)
-{	
-	g_densityFactor = 1.0;
+{
+	g_customDamageFactor = 1.0;
+	
+	if (!sm_ftrehab_plugin_enabled.BoolValue)
+		return MRES_Ignored;
 	
 	int weapon = OwnerOf(manager);
-	int attacker = OwnerOf(weapon);
 	
-	if (sm_ftrehab_angular_speed_affects_damage.BoolValue)
+	if (weapon != -1)
 	{
-		Address pFlame = DHookGetParamAddress(params, 1);
-		g_densityFactor = EstimateFlameDensityFactor(attacker, pFlame);
-	}
-	
-	if (sm_ftrehab_display_angular_speed_multiplier.BoolValue)
-	{
-		PrintCenterText(attacker, "%d", RoundFloat(g_densityFactor * 100.0));
+		int attacker = OwnerOf(weapon);
+		
+		if (attacker != -1)
+		{
+			if (sm_ftrehab_angular_speed_affects_damage.BoolValue)
+			{
+				Address pFlame = DHookGetParamAddress(params, 1);
+				g_customDamageFactor = EstimateFlameDensityFactor(attacker, pFlame);
+			}
+			
+			if (sm_ftrehab_display_angular_speed_multiplier.BoolValue)
+			{
+				PrintCenterText(attacker, "%d", RoundFloat(g_customDamageFactor * 100.0));
+			}
+			
+			if (sm_ftrehab_custom_rampup_enabled.BoolValue)
+			{
+				Address pVictim = view_as<Address>(DHookGetParam(params, 2));				
+				int hVictim = Load32(OffsetPointer(pVictim, g_offset__m_RefEHandle));				
+				int victimRef = hVictim | 0x80000000;
+				
+				if (IsValidEntity(victimRef))
+				{
+					float rampupFactor = ApplyCustomRampup(
+						attacker, victimRef, g_customDamageFactor);
+					
+					if (g_customDamageFactor > rampupFactor)
+					{
+						g_customDamageFactor = rampupFactor;
+					}
+					
+					if (sm_ftrehab_display_custom_rampup.BoolValue)
+					{
+						PrintCenterText(
+							attacker, "Rampup: %d%%", RoundFloat(rampupFactor * 100.0));
+					}
+				}
+			}
+		}
 	}
 	
 	if (sm_ftrehab_bluemoon_rampup.BoolValue)
@@ -333,9 +471,14 @@ MRESReturn CTFFlameManager_GetFlameDamageScale_Pre(
 
 MRESReturn CTFFlameManager_GetFlameDamageScale_Post(
 	int manager, DHookReturn result, DHookParam params)
-{
+{	
+	if (sm_ftrehab_refill_dummy_bots.BoolValue)
+	{
+		ServerCommand("bot_refill");
+	}
+	
 	float resultValue = DHookGetReturn(result);
-	resultValue *= g_densityFactor;
+	resultValue *= g_customDamageFactor;
 	DHookSetReturn(result, resultValue);
 	
 	return MRES_ChangedOverride;
@@ -350,10 +493,79 @@ public void OnPluginStart()
 {
 	CacheOffsets();
 	
+	sm_ftrehab_refill_dummy_bots = CreateConVar(
+		"sm_ftrehab_refill_dummy_bots",
+		"0",
+		"(For development) Whenever damage computations are made, \"bot_refill\" is executed",
+		0,
+		true, 0.0,
+		true, 1.0
+	);
+	
+	sm_ftrehab_display_custom_rampup = CreateConVar(
+		"sm_ftrehab_display_custom_rampup",
+		"0",
+		"(For development) If enabled, damage multiplier that is based on custom rampup will be displayed to the player",
+		0,
+		true, 0.0,
+		true, 1.0
+	);
+	
 	sm_ftrehab_display_angular_speed_multiplier = CreateConVar(
 		"sm_ftrehab_display_angular_speed_multiplier",
 		"0",
 		"(For development) If enabled, damage multiplier that is based on angular speed will be displayed to the player",
+		0,
+		true, 0.0,
+		true, 1.0
+	);
+	
+	sm_ftrehab_custom_rampup_increment_is_affected_by_angular_speed = CreateConVar(
+		"sm_ftrehab_custom_rampup_increment_is_affected_by_angular_speed",
+		"1",
+		"Custom rampup increment should be multiplied by angular speed damage factor",
+		0,
+		true, 0.0,
+		true, 1.0
+	);
+	
+	sm_ftrehab_custom_rampup_first_tick_deals_max_damage = CreateConVar(
+		"sm_ftrehab_custom_rampup_first_tick_deals_max_damage",
+		"0",
+		"If rampup amount is exactly at minimum, maximum damage will be dealt (this is how the weapon behaves in unmodified game!)",
+		0,
+		true, 0.0,
+		true, 1.0
+	);
+	
+	sm_ftrehab_custom_rampup_drain_time = CreateConVar(
+		"sm_ftrehab_custom_rampup_drain_time",
+		"0.5",
+		"It takes THIS many seconds to drain rampup from max to min",
+		0,
+		true, 0.001		
+	);
+	
+	sm_ftrehab_custom_rampup_linger_time = CreateConVar(
+		"sm_ftrehab_custom_rampup_linger_time",
+		"0.2",
+		"When not refreshed, rampup won't be drained for THIS many seconds",
+		0,
+		true, 0.0
+	);
+	
+	sm_ftrehab_custom_rampup_increment_per_hit = CreateConVar(
+		"sm_ftrehab_custom_rampup_increment_per_hit",
+		"0.15",
+		"Amount of rampup gain per hit (from 0.0 to 1.0 where these numbers represent min and max damage respectively)",
+		0,
+		true, 0.0
+	);
+	
+	sm_ftrehab_custom_rampup_enabled = CreateConVar(
+		"sm_ftrehab_custom_rampup_enabled",
+		"1",
+		"Enables custom damage rampup",
 		0,
 		true, 0.0,
 		true, 1.0
@@ -420,6 +632,15 @@ public void OnPluginStart()
 		true, 1.0
 	);
 	
+	sm_ftrehab_plugin_enabled = CreateConVar(
+		"sm_ftrehab_plugin_enabled",
+		"1",
+		"Enables the effect of \"Flamethrower Rehabilitation\" plugin",
+		0,
+		true, 0.0,
+		true, 1.0
+	);
+	
 	GameData conf = new GameData("tf2.flamethrower-rehabilitation");
 	
 	if (!conf)
@@ -458,5 +679,11 @@ public void OnMapStart()
 		{
 			g_timestampsHistory[player][slot] = -1000.0;
 		}
+	}
+	
+	for (int cursor = 0; cursor < RAMPUP_RING_SIZE; cursor++)
+	{
+		g_rampup[cursor].attackerRef = -1;
+		g_rampup[cursor].victimRef = -1;
 	}
 }

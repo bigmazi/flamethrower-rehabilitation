@@ -4,25 +4,26 @@
 	{
 		"Functions"
 		{
-			// void CTFFlameManager::OnCollide( CBaseEntity *pEnt, int iPointIndex )
-			"CTFFlameManager::OnCollide"
-			{
-				"signature"		"CTFFlameManager::OnCollide"
-				"callconv"		"thiscall"
-				"this"			"entity"
-				"return"		"void"
-				"arguments"
-				{
-					"pEnt"
-					{
-						"type"	"objectptr"
-					}					
-					"iPointIndex"
-					{
-						"type"	"int"
-					}
-				}
-			}
+			// UNUSED
+			//// void CTFFlameManager::OnCollide( CBaseEntity *pEnt, int iPointIndex )
+			//"CTFFlameManager::OnCollide"
+			//{
+			//	"signature"		"CTFFlameManager::OnCollide"
+			//	"callconv"		"thiscall"
+			//	"this"			"entity"
+			//	"return"		"void"
+			//	"arguments"
+			//	{
+			//		"pEnt"
+			//		{
+			//			"type"	"objectptr"
+			//		}					
+			//		"iPointIndex"
+			//		{
+			//			"type"	"int"
+			//		}
+			//	}
+			//}
 			
 			// float CTFFlameManager::GetFlameDamageScale( const tf_point_t* pPoint, CTFPlayer *pTFTarget /*= NULL*/ ) const
 			"CTFFlameManager::GetFlameDamageScale"
@@ -44,38 +45,43 @@
 				}
 			}
 			
-			// void CTFPointManager::Touch( CBaseEntity *pOther )
-			"CTFPointManager::Touch"
-			{
-				"signature"		"CTFPointManager::Touch"
-				"callconv"		"thiscall"
-				"this"			"entity"
-				"return"		"void"
-				"arguments"
-				{
-					"pOther"
-					{
-						"type"	"cbaseentity"
-					}
-				}
-			}
+			// UNUSED
+			//// void CTFPointManager::Touch( CBaseEntity *pOther )
+			//"CTFPointManager::Touch"
+			//{
+			//	"signature"		"CTFPointManager::Touch"
+			//	"callconv"		"thiscall"
+			//	"this"			"entity"
+			//	"return"		"void"
+			//	"arguments"
+			//	{
+			//		"pOther"
+			//		{
+			//			"type"	"cbaseentity"
+			//		}
+			//	}
+			//}
 		}
 		
 		"Signatures"
 		{
-			"CTFFlameManager::OnCollide"
-			{
-				"windows" "\x53\x8B\xDC\x83\xEC\x08\x83\xE4\xF0\x83\xC4\x04\x55\x8B\x6B\x04\x89\x6C\x24\x04\x8B\xEC\x81\xEC\x78\x01\x00\x00\x56\x57\x8B\xF9\x33\xD2"
-			}
+			// UNUSED
+			//"CTFFlameManager::OnCollide"
+			//{
+			//	"windows" "\x53\x8B\xDC\x83\xEC\x08\x83\xE4\xF0\x83\xC4\x04\x55\x8B\x6B\x04\x89\x6C\x24\x04\x8B\xEC\x81\xEC\x78\x01\x00\x00\x56\x57\x8B\xF9\x33\xD2"
+			//}
+			
 			"CTFFlameManager::GetFlameDamageScale"
 			{
 				"windows" "\x55\x8B\xEC\x83\xEC\x18\x8B\x15\x2A\x2A\x2A\x2A\x57\x8B\xF9\x33\xC9\x89\x4D\xE8\x89\x4D\xEC\x8B\x02\x89\x4D\xF4\x89\x4D\xF8\x85\xC0"
 				"linux" "@_ZNK15CTFFlameManager19GetFlameDamageScaleEPK10tf_point_tP9CTFPlayer"
 			}
-			"CTFPointManager::Touch"
-			{
-				"windows" "\x53\x8B\xDC\x83\xEC\x08\x83\xE4\xF0\x83\xC4\x04\x55\x8B\x6B\x04\x89\x6C\x24\x04\x8B\xEC\x81\xEC\xB8\x00\x00\x00\x56\x57\xFF\x73\x08\x8B\xF9\x8B\x07\x8B\x80\x2C\x03\x00\x00\xFF\xD0\x84\xC0"
-			}
+			
+			// UNUSED
+			//"CTFPointManager::Touch"
+			//{
+			//	"windows" "\x53\x8B\xDC\x83\xEC\x08\x83\xE4\xF0\x83\xC4\x04\x55\x8B\x6B\x04\x89\x6C\x24\x04\x8B\xEC\x81\xEC\xB8\x00\x00\x00\x56\x57\xFF\x73\x08\x8B\xF9\x8B\x07\x8B\x80\x2C\x03\x00\x00\xFF\xD0\x84\xC0"
+			//}
 		}
 	}
 }
