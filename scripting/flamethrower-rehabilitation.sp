@@ -7,7 +7,7 @@ public Plugin myinfo = {
 	name = "[TF2] Flamethrower Rehabilitation",
 	author = "bigmazi",
 	description = "Overhauls flamethrower mechanics",
-	version = "1.1.0.0",
+	version = "1.1.0.1",
 	url = "https://steamcommunity.com/id/bmazi"
 };
 
@@ -311,7 +311,7 @@ float ApplyCustomRampup(int attacker, int victimRef, float angularSpeedDamageFac
 	
 	if (ringIdx == -1)
 	{
-		g_rampupCursor += 1;
+		g_rampupCursor = (g_rampupCursor + 1) & RAMPUP_RING_MASK;
 		ringIdx = g_rampupCursor;
 		
 		g_rampup[ringIdx].attackerRef = attackerRef;
