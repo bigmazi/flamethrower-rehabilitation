@@ -7,7 +7,7 @@ public Plugin myinfo = {
 	name = "[TF2] Flamethrower Rehabilitation",
 	author = "bigmazi",
 	description = "Overhauls flamethrower mechanics",
-	version = "1.1.0.1",
+	version = "1.1.0.2",
 	url = "https://steamcommunity.com/id/bmazi"
 };
 
@@ -384,7 +384,14 @@ void tf_flame_manager_Think_Pre(int manager)
 		return;
 	
 	int weapon = OwnerOf(manager);
+	
+	if (weapon == -1)
+		return;
+	
 	int player = OwnerOf(weapon);
+	
+	if (player == -1)
+		return;
 	
 	g_historyCursors[player] = (g_historyCursors[player] + 1) & HISTORY_RING_MASK;
 	int cursor = g_historyCursors[player];
