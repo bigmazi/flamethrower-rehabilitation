@@ -7,7 +7,7 @@ public Plugin myinfo = {
 	name = "[TF2] Flamethrower Rehabilitation",
 	author = "bigmazi",
 	description = "Overhauls flamethrower mechanics",
-	version = "1.1.0.2",
+	version = "1.1.0.3",
 	url = "https://steamcommunity.com/id/bmazi"
 };
 
@@ -440,24 +440,28 @@ MRESReturn CTFFlameManager_GetFlameDamageScale_Pre(
 			
 			if (sm_ftrehab_custom_rampup_enabled.BoolValue)
 			{
-				Address pVictim = view_as<Address>(DHookGetParam(params, 2));				
-				int hVictim = Load32(OffsetPointer(pVictim, g_offset__m_RefEHandle));				
-				int victimRef = hVictim | 0x80000000;
+				Address pVictim = view_as<Address>(DHookGetParam(params, 2));
 				
-				if (IsValidEntity(victimRef))
+				if (pVictim)
 				{
-					float rampupFactor = ApplyCustomRampup(
-						attacker, victimRef, g_customDamageFactor);
+					int hVictim = Load32(OffsetPointer(pVictim, g_offset__m_RefEHandle));				
+					int victimRef = hVictim | 0x80000000;
 					
-					if (g_customDamageFactor > rampupFactor)
+					if (IsValidEntity(victimRef))
 					{
-						g_customDamageFactor = rampupFactor;
-					}
-					
-					if (sm_ftrehab_display_custom_rampup.BoolValue)
-					{
-						PrintCenterText(
-							attacker, "Rampup: %d%%", RoundFloat(rampupFactor * 100.0));
+						float rampupFactor = ApplyCustomRampup(
+							attacker, victimRef, g_customDamageFactor);
+						
+						if (g_customDamageFactor > rampupFactor)
+						{
+							g_customDamageFactor = rampupFactor;
+						}
+						
+						if (sm_ftrehab_display_custom_rampup.BoolValue)
+						{
+							PrintCenterText(
+								attacker, "Rampup: %d%%", RoundFloat(rampupFactor * 100.0));
+						}
 					}
 				}
 			}
